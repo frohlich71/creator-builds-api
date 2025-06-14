@@ -1,6 +1,6 @@
 import { Controller, Post, Body, Delete, Param } from '@nestjs/common';
 import { EquipmentService } from './equipment.service';
-import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CreateEquipmentDto } from './DTOs/create-equipment.dto';
 
 @ApiTags('Equipments')
@@ -10,6 +10,7 @@ export class EquipmentController {
 
   @Post()
   @ApiOperation({ summary: 'Create equipment for setup' })
+  @ApiBearerAuth('access-token')
   @ApiBody({
     schema: {
       example: {
@@ -30,6 +31,7 @@ export class EquipmentController {
   }
 
   @Delete(':id')
+  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Delete equipment by id' })
   async deleteEquipmentById(@Param('id') id: string) {
     return this.equipmentService.deleteById(id);

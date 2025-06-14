@@ -28,7 +28,7 @@ describe('UserController', () => {
   });
 
   it('should create a new user', async () => {
-    const result = await controller.createUser({ name: 'João' });
+    const result = await controller.createUser({ name: 'João', email: 'joao@example.com', password: '123456', telephone: '99999-9999' });
     expect(result).toEqual({ name: 'João' });
     expect(mockUserService.create).toHaveBeenCalledWith({ name: 'João' });
   });

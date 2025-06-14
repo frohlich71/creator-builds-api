@@ -11,6 +11,17 @@ async function bootstrap() {
       'API para gerenciamento de usuários, setups e equipamentos do Creator Builds',
     )
     .setVersion('1.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'Authorization',
+        description: 'Informe o token JWT no campo abaixo',
+        in: 'header',
+      },
+      'access-token'
+    )
     .addTag('creator')
     .build();
 
