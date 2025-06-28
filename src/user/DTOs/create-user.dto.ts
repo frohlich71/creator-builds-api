@@ -14,6 +14,35 @@ export class CreateUserDto {
   @IsString()
   password: string;
 
+  @ApiProperty()
+  @IsString()
+  nickname: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  website?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  instagram?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  x?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  youtube?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  profileImage?: string;
+
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()

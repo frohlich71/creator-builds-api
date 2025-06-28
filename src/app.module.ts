@@ -6,6 +6,8 @@ import { UserModule } from './user/user.module';
 import { SetupModule } from './setup/setup.module';
 import { EquipamentModule } from './equipment/equipament.module';
 import { AuthModule } from './auth/auth.module';
+import { ProductsModule } from './products/products.module';
+import { TechProductsSeederModule } from './seeds/tech-products-seeder.module';
 
 const mongoUri = process.env.MONGO_URI;
 if (!mongoUri) {
@@ -19,6 +21,8 @@ if (!mongoUri) {
     SetupModule,
     EquipamentModule,
     AuthModule,
+    ProductsModule,
+    TechProductsSeederModule
   ],
   controllers: [AppController],
   providers: [AppService],

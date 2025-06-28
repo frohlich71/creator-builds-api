@@ -3,6 +3,11 @@
 import { IsString, IsArray } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
+export type CreateEquipmentDTO = {
+  name: string;
+  asin: string;
+}
+
 export class CreateSetupDto {
   @ApiProperty()
   @IsString()
@@ -10,10 +15,9 @@ export class CreateSetupDto {
 
   @ApiProperty()
   @IsString()
-  ownerId: string;
+  ownerName: string;
 
-  @ApiProperty({ type: [String] })
+  @ApiProperty()
   @IsArray()
-  @IsString({ each: true })
-  equipments: string[];
+  equipments: CreateEquipmentDTO[];
 }

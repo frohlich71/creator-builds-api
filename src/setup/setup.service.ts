@@ -6,6 +6,9 @@ import {
   Equipment,
   EquipmentDocument,
 } from '../equipment/schemas/equipment.schema';
+import { CreateEquipmentDTO } from './DTOs/create-setup.dto';
+import { Product, ProductDocument } from 'src/products/schemas/products.schema';
+import { User, UserDocument } from 'src/user/schemas/user.schema';
 
 @Injectable()
 export class SetupService {
@@ -13,31 +16,72 @@ export class SetupService {
     @InjectModel(Setup.name) private setupModel: Model<SetupDocument>,
     @InjectModel(Equipment.name)
     private equipmentModel: Model<EquipmentDocument>,
+    @InjectModel(Product.name)
+    private productModel: Model<ProductDocument>,
+    @InjectModel(User.name)
+    private userModel: Model<UserDocument>, 
   ) {}
 
   async createForUser(
     name: string,
-    ownerId: string,
-    equipments: string[],
+    ownerName: string,
+    equipments: CreateEquipmentDTO[],
   ): Promise<Setup> {
+
+    const user = await this.userModel.findOne({name: ownerName}).exec();
+
+    if (!user) {
+      throw new Error(`User with name ${ownerName} not found`);
+    }
+
     const setup = new this.setupModel({
       name,
-      owner: new Types.ObjectId(ownerId),
-      equipments: equipments.map((id) => new Types.ObjectId(id)),
+      owner: user._id
+    });
+    
+    const savedSetup = await setup.save();
+
+    const equipmentPromises = equipments.map(async (equipment) => {
+      const product = await this.productModel.findOne({ asin: equipment.asin }).exec();
+      if (!product) {
+        throw new Error(`Product with ASIN ${equipment.asin} not found`);
+      }
+      
+      const newEquipment = new this.equipmentModel({
+        name: equipment.name,
+        setup: savedSetup._id,
+        product: product._id
+      });
+      
+      return newEquipment.save();
     });
 
-    return setup.save();
+    const savedEquipments = await Promise.all(equipmentPromises);
+
+    savedSetup.equipments = savedEquipments.map(eq => eq._id);
+    await savedSetup.save();
+
+    return savedSetup;
   }
 
   async findByUserId(userId: string): Promise<any[]> {
     const setups = await this.setupModel
       .find({ owner: new Types.ObjectId(userId) })
+      .populate({
+        path: 'equipments',
+        populate: {
+          path: 'product',
+          model: 'Product'
+        }
+      })
       .exec();
 
+    // Se não tiver a relação direta, fazer populate manual
     const result = await Promise.all(
       setups.map(async (setup) => {
         const equipments = await this.equipmentModel
           .find({ setup: setup._id })
+          .populate('product')
           .exec();
 
         return {

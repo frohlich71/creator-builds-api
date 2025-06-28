@@ -15,9 +15,9 @@ export class SetupController {
   async createSetupForUser(
     @Body() createSetupDto: CreateSetupDto,
   ) {
-    const { name, ownerId, equipments } = createSetupDto;
-    return this.setupService.createForUser(name, ownerId, equipments);
-  }
+    const { name, ownerName, equipments } = createSetupDto;
+    return this.setupService.createForUser(name, ownerName, equipments);
+  }S
 
   @Get('user/:userId')
   @ApiBearerAuth('access-token')
