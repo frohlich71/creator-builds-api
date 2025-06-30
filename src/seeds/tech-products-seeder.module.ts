@@ -22,10 +22,62 @@ export class TechProductsSeederModule implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    // Busca o arquivo a partir da raiz do projeto, não do dist
-    const filePath = path.resolve(process.cwd(), 'src/data/amazon_products.csv');
+    // Verifica se o seeding está habilitado
+    const shouldSeed = process.env.SEED_PRODUCTS === 'true';
+    if (!shouldSeed) {
+      this.logger.log('Seeding de produtos desabilitado via SEED_PRODUCTS=false');
+      return;
+    }
+
+    try {
+      await this.seedProducts();
+    } catch (error) {
+      this.logger.error('Erro durante o seeding de produtos:', error);
+    }
+  }
+
+  private async seedProducts(): Promise<void> {
+    // Verifica se já existem produtos na base (a menos que seja forçado)
+    const forceSeeding = process.env.FORCE_SEED === 'true';
+    const existingProductsCount = await this.productModel.countDocuments();
+    
+    if (existingProductsCount > 0 && !forceSeeding) {
+      this.logger.log(`Base já possui ${existingProductsCount} produtos. Pulando seed. (Use FORCE_SEED=true para forçar)`);
+      return;
+    }
+
+    if (forceSeeding && existingProductsCount > 0) {
+      this.logger.log(`FORCE_SEED=true: Limpando ${existingProductsCount} produtos existentes...`);
+      await this.productModel.deleteMany({});
+    }
+
+    this.logger.log('Iniciando o seed de produtos...');
+
+    // Tenta múltiplos caminhos possíveis para o arquivo CSV
+    const possiblePaths = [
+      path.resolve(process.cwd(), 'src/data/amazon_products.csv'),
+      path.resolve(process.cwd(), 'data/amazon_products.csv'),
+      path.resolve(__dirname, '../data/amazon_products.csv'),
+      path.resolve(__dirname, '../../data/amazon_products.csv'),
+    ];
+
+    let filePath: string | null = null;
+    for (const possiblePath of possiblePaths) {
+      this.logger.log(`Verificando caminho: ${possiblePath}`);
+      if (fs.existsSync(possiblePath)) {
+        filePath = possiblePath;
+        this.logger.log(`✅ Arquivo CSV encontrado em: ${filePath}`);
+        break;
+      }
+    }
+
+    if (!filePath) {
+      this.logger.error('❌ Arquivo CSV não encontrado em nenhum dos caminhos esperados:', possiblePaths);
+      return;
+    }
+
     const productsToInsert: Record<string, any>[] = [];
-    console.log('Iniciando o seed de produtos...');
+    
     await new Promise<void>((resolve, reject) => {
       fs.createReadStream(filePath)
         .pipe(csv())
@@ -37,34 +89,50 @@ export class TechProductsSeederModule implements OnModuleInit {
               title: row['title'],
               imgUrl: row['imgUrl'],
               productURL: row['productURL'],
-              stars: Number(row['stars']),
-              reviews: Number(row['reviews']),
-              price: Number(row['price']),
-              listPrice: Number(row['listPrice']),
+              stars: Number(row['stars']) || 0,
+              reviews: Number(row['reviews']) || 0,
+              price: Number(row['price']) || 0,
+              listPrice: Number(row['listPrice']) || 0,
               category_id: categoryId,
               isBestSeller: row['isBestSeller'] === 'True' || row['isBestSeller'] === 'true',
             });
           }
         })
         .on('end', () => {
-          (async () => {
-            if (productsToInsert.length) {
+          void (async () => {
+            try {
+              if (productsToInsert.length === 0) {
+                this.logger.warn('Nenhum produto encontrado para inserir.');
+                resolve();
+                return;
+              }
+
               // Remove itens duplicados pelo campo 'asin' antes de inserir
               const uniqueProductsMap = new Map();
               for (const product of productsToInsert) {
-                if (!uniqueProductsMap.has(product.asin)) {
+                if (product.asin && !uniqueProductsMap.has(product.asin)) {
                   uniqueProductsMap.set(product.asin, product);
                 }
               }
+              
               const uniqueProducts = Array.from(uniqueProductsMap.values());
-              try {
+              this.logger.log(`Produtos processados: ${productsToInsert.length}, únicos: ${uniqueProducts.length}`);
+
+              if (uniqueProducts.length > 0) {
                 await this.productModel.insertMany(uniqueProducts, { ordered: false });
-                this.logger.log('Produtos inseridos com sucesso!');
-              } catch {
-                this.logger.warn('Alguns produtos não foram inseridos (possíveis duplicatas no banco).');
+                this.logger.log(`${uniqueProducts.length} produtos inseridos com sucesso!`);
+              }
+              
+              resolve();
+            } catch (error) {
+              if (error instanceof Error && 'code' in error && error.code === 11000) {
+                this.logger.warn('Alguns produtos não foram inseridos devido a duplicatas no banco.');
+                resolve();
+              } else {
+                this.logger.error('Erro ao inserir produtos:', error);
+                reject(error instanceof Error ? error : new Error(String(error)));
               }
             }
-            resolve();
           })();
         })
         .on('error', (err) => {
