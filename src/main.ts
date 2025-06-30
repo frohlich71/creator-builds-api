@@ -6,9 +6,23 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Configuração CORS mais permissiva para debug
   app.enableCors({
-    origin: ['http://localhost:3002'], // ou use '*' para desenvolvimento
+    origin: true, // Permite qualquer origem temporariamente
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: [
+      'Origin',
+      'X-Requested-With',
+      'Content-Type',
+      'Accept',
+      'Authorization',
+      'Bearer',
+      'X-CSRF-Token'
+    ],
+    exposedHeaders: ['Authorization'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   })
   
   const config = new DocumentBuilder()
