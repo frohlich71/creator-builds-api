@@ -96,6 +96,45 @@ export class ProductsController {
       } else {
         throw new Error('Formato JSON inválido. Esperado um array de produtos ou objeto com propriedade "products"');
       }
+      
+      // Limpa os produtos removendo campos MongoDB específicos e convertendo formatos
+      products = products.map((product: any): CreateProductDto => {
+        const cleanProduct: any = { ...product };
+        
+        // Remove campos específicos do MongoDB
+        delete cleanProduct._id;
+        delete cleanProduct.__v;
+        delete cleanProduct.$__;
+        delete cleanProduct.$isNew;
+        delete cleanProduct._doc;
+        
+        // Se o produto veio de um export MongoDB, pode ter estrutura _doc
+        if (product._doc) {
+          Object.assign(cleanProduct, product._doc);
+          delete cleanProduct._id;
+          delete cleanProduct.__v;
+        }
+        
+        // Converte ObjectId do MongoDB se necessário
+        if (cleanProduct._id && typeof cleanProduct._id === 'object' && cleanProduct._id.$oid) {
+          delete cleanProduct._id;
+        }
+        
+        // Garantir que campos numéricos sejam numbers
+        if (cleanProduct.stars) cleanProduct.stars = Number(cleanProduct.stars);
+        if (cleanProduct.reviews) cleanProduct.reviews = Number(cleanProduct.reviews);
+        if (cleanProduct.price) cleanProduct.price = Number(cleanProduct.price);
+        if (cleanProduct.listPrice) cleanProduct.listPrice = Number(cleanProduct.listPrice);
+        if (cleanProduct.category_id) cleanProduct.category_id = Number(cleanProduct.category_id);
+        
+        // Garantir que boolean seja boolean
+        if (typeof cleanProduct.isBestSeller === 'string') {
+          cleanProduct.isBestSeller = cleanProduct.isBestSeller === 'true' || cleanProduct.isBestSeller === 'True';
+        }
+        
+        return cleanProduct as CreateProductDto;
+      });
+      
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       throw new Error(`Erro ao processar arquivo JSON: ${errorMessage}`);
