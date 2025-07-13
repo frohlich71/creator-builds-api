@@ -42,15 +42,27 @@ export class SetupService {
     const savedSetup = await setup.save();
 
     const equipmentPromises = equipments.map(async (equipment) => {
-      const product = await this.productModel.findOne({ asin: equipment.asin }).exec();
-      if (!product) {
-        throw new Error(`Product with ASIN ${equipment.asin} not found`);
+      let productId: Types.ObjectId | undefined;
+      
+      // Se foi fornecido um ASIN, tenta encontrar o produto
+      if (equipment.asin) {
+        const product = await this.productModel.findOne({ asin: equipment.asin }).exec();
+        if (!product) {
+          console.warn(`Product with ASIN ${equipment.asin} not found, creating equipment without product reference`);
+        } else {
+          productId = product._id;
+        }
       }
       
       const newEquipment = new this.equipmentModel({
         name: equipment.name,
+        nickname: equipment.nickname,
+        model: equipment.model,
+        brand: equipment.brand,
+        link: equipment.link,
+        icon: equipment.icon,
         setup: savedSetup._id,
-        product: product._id
+        ...(productId && { product: productId })
       });
       
       return newEquipment.save();
@@ -99,5 +111,95 @@ export class SetupService {
 
     await this.equipmentModel.deleteMany({ setup: objectId }).exec();
     return this.setupModel.findByIdAndDelete(objectId).exec();
+  }
+
+  async updateById(
+    setupId: string,
+    name: string,
+    ownerName: string,
+    equipments: CreateEquipmentDTO[],
+  ): Promise<Setup> {
+    const objectId = new Types.ObjectId(setupId);
+
+    // Verifica se o setup existe
+    const existingSetup = await this.setupModel.findById(objectId).exec();
+    if (!existingSetup) {
+      throw new Error(`Setup with ID ${setupId} not found`);
+    }
+
+    // Verifica se o usuário existe
+    const user = await this.userModel.findOne({ name: ownerName }).exec();
+    if (!user) {
+      throw new Error(`User with name ${ownerName} not found`);
+    }
+
+    // Remove todos os equipamentos existentes do setup
+    await this.equipmentModel.deleteMany({ setup: objectId }).exec();
+
+    // Atualiza o setup
+    existingSetup.name = name;
+    existingSetup.owner = user._id;
+    existingSetup.equipments = [];
+    await existingSetup.save();
+
+    // Cria os novos equipamentos
+    const equipmentPromises = equipments.map(async (equipment) => {
+      let productId: Types.ObjectId | undefined;
+      
+      // Se foi fornecido um ASIN, tenta encontrar o produto
+      if (equipment.asin) {
+        const product = await this.productModel.findOne({ asin: equipment.asin }).exec();
+        if (!product) {
+          console.warn(`Product with ASIN ${equipment.asin} not found, creating equipment without product reference`);
+        } else {
+          productId = product._id;
+        }
+      }
+      
+      const newEquipment = new this.equipmentModel({
+        name: equipment.name,
+        nickname: equipment.nickname,
+        model: equipment.model,
+        brand: equipment.brand,
+        link: equipment.link,
+        icon: equipment.icon,
+        setup: existingSetup._id,
+        ...(productId && { product: productId })
+      });
+      
+      return newEquipment.save();
+    });
+
+    const savedEquipments = await Promise.all(equipmentPromises);
+
+    // Atualiza as referências dos equipamentos no setup
+    existingSetup.equipments = savedEquipments.map(eq => eq._id);
+    await existingSetup.save();
+
+    return existingSetup;
+  }
+
+  async findById(setupId: string) {
+    const objectId = new Types.ObjectId(setupId);
+    
+    const setup = await this.setupModel
+      .findById(objectId)
+      .populate('owner', 'name email')
+      .exec();
+
+    if (!setup) {
+      throw new Error(`Setup with ID ${setupId} not found`);
+    }
+
+    // Busca os equipamentos do setup
+    const equipments = await this.equipmentModel
+      .find({ setup: setup._id })
+      .populate('product')
+      .exec();
+
+    return {
+      ...setup.toObject(),
+      equipments,
+    };
   }
 }

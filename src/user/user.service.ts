@@ -92,7 +92,7 @@ export class UserService {
         _id: { $ne: userId }
       });
       if (existingUser) {
-        throw new ConflictException('Nome de usuário já existe');
+        throw new ConflictException('User with this name already exists');
       }
     }
 
@@ -102,7 +102,7 @@ export class UserService {
         _id: { $ne: userId }
       });
       if (existingEmail) {
-        throw new ConflictException('Email já está em uso');
+        throw new ConflictException('Email already in use');
       }
     }
 

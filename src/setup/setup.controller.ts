@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, Delete } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Delete, Put } from '@nestjs/common';
 import { SetupService } from './setup.service';
 import { ApiTags, ApiOperation, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { CreateSetupDto } from './DTOs/create-setup.dto';
@@ -17,13 +17,32 @@ export class SetupController {
   ) {
     const { name, ownerName, equipments } = createSetupDto;
     return this.setupService.createForUser(name, ownerName, equipments);
-  }S
+  }
+
+  @Get(':id')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get a setup by id' })
+  async getSetupById(@Param('id') id: string) {
+    return this.setupService.findById(id);
+  }
 
   @Get('user/:userId')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get all setups for an user' })
   async getSetupsByUser(@Param('userId') userId: string) {
     return this.setupService.findByUserId(userId);
+  }
+
+  @Put(':id')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update a setup by id' })
+  @ApiBody({ type: CreateSetupDto })
+  async updateSetupById(
+    @Param('id') id: string,
+    @Body() updateSetupDto: CreateSetupDto,
+  ) {
+    const { name, ownerName, equipments } = updateSetupDto;
+    return await this.setupService.updateById(id, name, ownerName, equipments);
   }
 
   @Delete(':id')
