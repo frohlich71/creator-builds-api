@@ -7,6 +7,7 @@ import { SetupService } from 'src/setup/setup.service';
 import { Setup, SetupSchema } from 'src/setup/schemas/setup.schema';
 import { Equipment, EquipmentSchema } from 'src/equipment/schemas/equipment.schema';
 import { Product, ProductSchema } from 'src/products/schemas/products.schema';
+import { EmailModule } from 'src/email/email.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { Product, ProductSchema } from 'src/products/schemas/products.schema';
     MongooseModule.forFeature([{ name: Setup.name, schema: SetupSchema }]),
     MongooseModule.forFeature([{ name: Equipment.name, schema: EquipmentSchema }]),
     MongooseModule.forFeature([{ name: Product.name, schema: ProductSchema },]),
+    EmailModule,
   ],
   controllers: [UserController],
   providers: [UserService, SetupService],

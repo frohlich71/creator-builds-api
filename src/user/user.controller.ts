@@ -1,8 +1,10 @@
-import { Controller, Post, Body, Get, Param, Query, Put } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Query, Put, Request } from '@nestjs/common';
 import { UserService } from './user.service';
 import { ApiTags, ApiOperation, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { CreateUserDto } from './DTOs/create-user.dto';
+import { UpdateCurrentPasswordDto } from './DTOs/update-current-password.dto';
 import { Public } from 'src/constants/metadata';
+import { SendEmailVerificationDto, VerifyEmailDto, ResendVerificationDto } from './DTOs/email-verification.dto';
 
 @ApiTags('Users')
 @Controller('user')
@@ -52,5 +54,81 @@ export class UserController {
     @Body() updateUserDto: Partial<CreateUserDto>
   ) {
     return this.userService.update(id, updateUserDto);
+  }
+
+  @Post('update-password')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Update current user password' })
+  @ApiBody({ type: UpdateCurrentPasswordDto })
+  async updateCurrentPassword(
+    @Request() req: any,
+    @Body() updatePasswordDto: UpdateCurrentPasswordDto
+  ) {
+    const userId: string = req.user.userId; 
+    const { currentPassword, newPassword } = updatePasswordDto;
+    const updatedUser = await this.userService.updatePassword(userId, currentPassword, newPassword);
+    
+    if (updatedUser) {
+      return {
+        message: 'Password updated successfully',
+        user: {
+          _id: updatedUser._id,
+          name: updatedUser.name,
+          nickname: updatedUser.nickname,
+          email: updatedUser.email
+        }
+      };
+    }
+    
+    return { message: 'Password update failed' };
+  }
+
+  @Post('send-verification')
+  @Public()
+  @ApiOperation({ summary: 'Send email verification code' })
+  @ApiBody({ type: SendEmailVerificationDto })
+  async sendEmailVerification(@Body() sendVerificationDto: SendEmailVerificationDto) {
+    const result = await this.userService.sendEmailVerification(sendVerificationDto.email);
+    return result;
+  }
+
+  @Post('verify-email')
+  @Public()
+  @ApiOperation({ summary: 'Verify email address with code' })
+  @ApiBody({ type: VerifyEmailDto })
+  async verifyEmail(@Body() verifyEmailDto: VerifyEmailDto) {
+    const result = await this.userService.verifyEmail(
+      verifyEmailDto.email,
+      verifyEmailDto.verificationCode
+    );
+    return result;
+  }
+
+  @Post('resend-verification')
+  @Public()
+  @ApiOperation({ summary: 'Resend email verification code' })
+  @ApiBody({ type: ResendVerificationDto })
+  async resendEmailVerification(@Body() resendVerificationDto: ResendVerificationDto) {
+    const result = await this.userService.resendEmailVerification(resendVerificationDto.email);
+    return result;
+  }
+
+  @Get('verification-status/:email')
+  @Public()
+  @ApiOperation({ summary: 'Check email verification status' })
+  async checkEmailVerificationStatus(@Param('email') email: string) {
+    const user = await this.userService.findByEmail(email);
+    if (!user) {
+      return {
+        success: false,
+        message: 'User not found',
+      };
+    }
+
+    return {
+      success: true,
+      isEmailVerified: user.isEmailVerified,
+      isVerified: user.isVerified,
+    };
   }
 }

@@ -29,6 +29,24 @@ export class User {
   @Prop({required: false})
   youtube: string
 
+  @Prop({required: false})
+  tiktok: string
+
+  @Prop({required: false})
+  facebook: string
+
+  @Prop({required: false})
+  pinterest: string
+
+  @Prop({required: false})
+  twitch: string
+
+  @Prop({required: false})
+  linkedin: string
+
+  @Prop({required: false})
+  snapchat: string
+
   @Prop({ required: true })
   password: string;
 
@@ -40,6 +58,18 @@ export class User {
 
   @Prop({required: false})
   profileImage: string
+
+  @Prop({ default: false })
+  isEmailVerified: boolean;
+
+  @Prop({ required: true })
+  emailVerificationToken: string;
+
+  @Prop({ required: false })
+  emailVerificationExpiry: Date;
+
+  @Prop({ required: true, default: false })
+  isVerified: boolean;
 
   @Prop({ type: [Types.ObjectId], ref: 'Setup' })
   setups: Types.ObjectId[];

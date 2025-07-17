@@ -41,6 +41,36 @@ export class CreateUserDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
+  tiktok?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  facebook?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  pinterest?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  twitch?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  linkedin?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  snapchat?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
   profileImage?: string;
 
   @ApiProperty({ required: false })

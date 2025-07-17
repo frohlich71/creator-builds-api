@@ -5,12 +5,14 @@ import { User, UserDocument } from './schemas/user.schema';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from './DTOs/create-user.dto';
 import { SetupService } from 'src/setup/setup.service';
+import { EmailService } from 'src/email/email.service';
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    private setupService: SetupService
+    private setupService: SetupService,
+    private emailService: EmailService
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -35,9 +37,33 @@ export class UserService {
       throw new ConflictException('Email already in use');
     }
     
-    const createdUser = new this.userModel(createUserDto);
+    // Generate verification code for new user
+    const verificationCode = this.generateVerificationCode();
+    
+    const createdUser = new this.userModel({
+      ...createUserDto,
+      emailVerificationToken: verificationCode,
+      isEmailVerified: false,
+      isVerified: false,
+    });
+    const savedUser = await createdUser.save();
 
-    return createdUser.save();
+    // Enviar email de verificação (sem bloquear o registro em caso de erro)
+    try {
+      const verificationLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?email=${savedUser.email}&code=${verificationCode}`;
+      
+      await this.emailService.sendEmailVerification({
+        name: savedUser.name,
+        email: savedUser.email,
+        verificationCode,
+        verificationLink,
+      });
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      // Não lançamos o erro para não impedir o registro do usuário
+    }
+
+    return savedUser;
   }
 
   async findAll(): Promise<User[]> {
@@ -111,5 +137,134 @@ export class UserService {
       updateData,
       { new: true, runValidators: true }
     ).exec();
+  }
+
+  async updatePassword(userId: string, currentPassword: string, newPassword: string): Promise<User | null> {
+    // Busca o usuário pelo ID
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) {
+      throw new ConflictException('User not found');
+    }
+
+    // Verifica se a senha atual está correta
+    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isCurrentPasswordValid) {
+      throw new ConflictException('Current password is incorrect');
+    }
+
+    // Gera hash da nova senha
+    const salt = await bcrypt.genSalt();
+    const hashedNewPassword = await bcrypt.hash(newPassword, salt);
+
+    // Atualiza a senha
+    const updatedUser = await this.userModel.findByIdAndUpdate(
+      userId,
+      { password: hashedNewPassword },
+      { new: true, runValidators: true }
+    ).exec();
+
+    // Enviar notificação de senha alterada (sem bloquear a operação em caso de erro)
+    if (updatedUser) {
+      try {
+        await this.emailService.sendPasswordChangedNotification(
+          updatedUser.email,
+          updatedUser.name
+        );
+      } catch (emailError) {
+        console.error('Failed to send password changed notification:', emailError);
+        // Não lançamos o erro para não impedir a alteração da senha
+      }
+    }
+
+    return updatedUser;
+  }
+
+  // Email verification methods
+  generateVerificationCode(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit code
+  }
+
+  async sendEmailVerification(email: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const user = await this.userModel.findOne({ email }).exec();
+      if (!user) {
+        return { success: false, message: 'User not found' };
+      }
+
+      if (user.isEmailVerified) {
+        return { success: false, message: 'Email is already verified' };
+      }
+
+      // Generate new verification code
+      const verificationCode = this.generateVerificationCode();
+      const verificationLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?email=${email}&code=${verificationCode}`;
+
+      // Update user with new verification code and expiry
+      await this.userModel.findByIdAndUpdate(user._id, {
+        emailVerificationToken: verificationCode,
+        // Add expiry time (24 hours from now)
+        emailVerificationExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      }).exec();
+
+      // Send verification email
+      await this.emailService.sendEmailVerification({
+        name: user.name,
+        email: user.email,
+        verificationCode,
+        verificationLink,
+      });
+
+      return { success: true, message: 'Verification email sent successfully' };
+    } catch (error) {
+      console.error('Error sending verification email:', error);
+      return { success: false, message: 'Failed to send verification email' };
+    }
+  }
+
+  async verifyEmail(email: string, verificationCode: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const user = await this.userModel.findOne({ email }).exec();
+      if (!user) {
+        return { success: false, message: 'User not found' };
+      }
+
+      if (user.isEmailVerified) {
+        return { success: false, message: 'Email is already verified' };
+      }
+
+      if (user.emailVerificationToken !== verificationCode) {
+        return { success: false, message: 'Invalid verification code' };
+      }
+
+      // Check if verification code is expired (if you added expiry field)
+      if (user.emailVerificationExpiry && new Date() > user.emailVerificationExpiry) {
+        return { success: false, message: 'Verification code has expired' };
+      }
+
+      // Update user as verified
+      await this.userModel.findByIdAndUpdate(user._id, {
+        isEmailVerified: true,
+        isVerified: true,
+        emailVerificationToken: null,
+        emailVerificationExpiry: null,
+      }).exec();
+
+      // Send success notification email
+      try {
+        await this.emailService.sendEmailVerificationSuccess(user.email, user.name);
+      } catch (emailError) {
+        console.error('Failed to send verification success email:', emailError);
+        // Don't fail the verification if email fails
+      }
+
+      return { success: true, message: 'Email verified successfully' };
+    } catch (error) {
+      console.error('Error verifying email:', error);
+      return { success: false, message: 'Failed to verify email' };
+    }
+  }
+
+  async resendEmailVerification(email: string): Promise<{ success: boolean; message: string }> {
+    return this.sendEmailVerification(email);
   }
 }

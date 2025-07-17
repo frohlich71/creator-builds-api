@@ -8,6 +8,7 @@ import { EquipamentModule } from './equipment/equipament.module';
 import { AuthModule } from './auth/auth.module';
 import { ProductsModule } from './products/products.module';
 import { TechProductsSeederModule } from './seeds/tech-products-seeder.module';
+import { EmailModule } from './email/email.module';
 
 const mongoUri = process.env.MONGO_URI;
 if (!mongoUri) {
@@ -22,7 +23,8 @@ if (!mongoUri) {
     EquipamentModule,
     AuthModule,
     ProductsModule,
-    TechProductsSeederModule
+    TechProductsSeederModule,
+    EmailModule
   ],
   controllers: [AppController],
   providers: [AppService],
