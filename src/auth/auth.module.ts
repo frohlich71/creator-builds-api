@@ -16,6 +16,7 @@ import { SetupService } from 'src/setup/setup.service';
 import { Setup, SetupSchema } from 'src/setup/schemas/setup.schema';
 import { Equipment, EquipmentSchema } from 'src/equipment/schemas/equipment.schema';
 import { Product, ProductSchema } from 'src/products/schemas/products.schema';
+import { EmailService } from 'src/email/email.service';
 
 
 @Module({
@@ -48,7 +49,7 @@ import { Product, ProductSchema } from 'src/products/schemas/products.schema';
       signOptions: { expiresIn: '1d' },
     }),
   ],
-  providers: [UserService, SetupService ,AuthService, LocalStrategy , JwtStrategy, {provide: APP_GUARD, useClass: JwtAuthGuard}],
+  providers: [UserService, SetupService ,AuthService, EmailService ,LocalStrategy , JwtStrategy, {provide: APP_GUARD, useClass: JwtAuthGuard}],
   controllers: [AuthController],
   exports: [AuthService],
 })
