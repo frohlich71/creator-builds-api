@@ -99,7 +99,7 @@ export class UserController {
   async verifyEmail(@Body() verifyEmailDto: VerifyEmailDto) {
     const result = await this.userService.verifyEmail(
       verifyEmailDto.email,
-      verifyEmailDto.verificationCode
+      verifyEmailDto.code
     );
     return result;
   }

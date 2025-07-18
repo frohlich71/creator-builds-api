@@ -157,33 +157,34 @@ export class EmailService {
 
   async sendEmailVerification(data: EmailVerificationData) {
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #333; text-align: center;">Verify Your Email Address</h1>
-        <p style="color: #666; font-size: 16px;">Hello ${data.name},</p>
-        <p style="color: #666; font-size: 16px;">
-          Thank you for registering with Creator Builds! Please verify your email address to complete your account setup.
-        </p>
-        <div style="text-align: center; margin: 30px 0;">
-          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; display: inline-block;">
-            <p style="color: #333; font-size: 18px; margin: 0; font-weight: bold;">Verification Code:</p>
-            <p style="color: #007bff; font-size: 32px; margin: 10px 0; font-weight: bold; letter-spacing: 4px;">${data.verificationCode}</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #333; margin: 0; font-size: 28px;">Verify Your Email Address</h1>
+        </div>
+        
+        <div style="background-color: #f8f9fa; padding: 30px; border-radius: 12px; text-align: center;">
+          <p style="color: #666; font-size: 18px; margin: 0 0 20px 0;">Hello ${data.name},</p>
+          <p style="color: #666; font-size: 16px; margin: 0 0 30px 0; line-height: 1.5;">
+            Thank you for registering with Creator Builds! Please verify your email address to complete your account setup and start exploring our platform.
+          </p>
+          
+          <div style="margin: 40px 0;">
+            <a href="${data.verificationLink}" 
+               style="background-color: #007bff; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-size: 18px; font-weight: bold; display: inline-block; box-shadow: 0 4px 8px rgba(0,123,255,0.3);">
+              Verify Email Address
+            </a>
           </div>
+          
+          <p style="color: #666; font-size: 14px; margin: 20px 0 0 0;">
+            This verification link expires in 24 hours for security reasons.
+          </p>
         </div>
-        <p style="color: #666; font-size: 16px; text-align: center;">
-          Or click the button below to verify automatically:
-        </p>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${data.verificationLink}" 
-             style="background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px;">
-            Verify Email Address
-          </a>
+        
+        <div style="text-align: center; margin-top: 30px;">
+          <p style="color: #999; font-size: 14px; margin: 0;">
+            If you didn't create this account, you can safely ignore this email.
+          </p>
         </div>
-        <p style="color: #666; font-size: 16px;">
-          This verification code expires in 24 hours for security reasons.
-        </p>
-        <p style="color: #999; font-size: 14px; text-align: center;">
-          If you didn't create this account, you can ignore this email.
-        </p>
       </div>
     `;
 
@@ -206,7 +207,7 @@ export class EmailService {
           You can now access all features of the Creator Builds platform.
         </p>
         <div style="text-align: center; margin: 30px 0;">
-          <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/login" 
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/" 
              style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px;">
             Access Platform
           </a>

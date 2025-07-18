@@ -28,7 +28,7 @@ export class VerifyEmailDto {
   @IsNotEmpty()
   @MinLength(6)
   @MaxLength(6)
-  verificationCode: string;
+  code: string;
 }
 
 export class ResendVerificationDto {
