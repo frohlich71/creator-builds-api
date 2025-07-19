@@ -27,7 +27,7 @@ export class UserController {
   }
 
   @Get('name/:name')
-  @ApiBearerAuth('access-token')
+  @Public()
   @ApiOperation({ summary: 'Retrieve a user by name' })
   async getUserByName(@Param('name') name: string) {
     return this.userService.findByName(name);
